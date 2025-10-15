@@ -1,0 +1,79 @@
+{
+    "name": "key-gen",
+    "version": "0.1.1",
+    "main": "main.js",
+    "scripts": {
+        "start": "electron .",
+        "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\" \"npm run dev:electron\"",
+        "dev:frontend": "cd frontend && npm run dev",
+        "dev:backend": "cd backend && python run_server.py",
+        "dev:electron": "wait-on http://localhost:5174 http://localhost:8001/health && electron .",
+        "build": "npm run build:frontend && npm run build:backend && electron-builder",
+        "build:frontend": "cd frontend && npm run build",
+        "build:backend": "cd backend && python -m PyInstaller fastapibackend.spec",
+        "dist": "electron-builder --dir",
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "build:publish": "electron-builder --publish always"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "description": "",
+    "devDependencies": {
+        "concurrently": "^9.2.1",
+        "electron": "^29.4.0",
+        "electron-builder": "^26.0.12",
+        "wait-on": "^9.0.1"
+    },
+    "dependencies": {
+        "electron-is-dev": "^3.0.1",
+        "electron-log": "^5.4.1",
+        "electron-updater": "^6.6.2",
+        "node-fetch": "^3.3.2"
+    },
+    "build": {
+        "appId": "com.cubitdynamics.wa-bomb",
+        "productName": "WA BOMB",
+        "directories": {
+            "output": "dist"
+        },
+        "files": [
+            "main.js",
+            "preload.js",
+            "package.json",
+            "build/**/*",
+            "backend/dist/fastapibackend.exe",
+            {
+                "from": "backend/dist",
+                "to": "backend/dist",
+                "filter": [
+                    "**/*"
+                ]
+            },
+            "frontend/dist/**/*"
+        ],
+        "extraResources": [
+            {
+                "from": "backend/dist/fastapibackend.exe",
+                "to": "fastapibackend.exe"
+            }
+        ],
+        "win": {
+            "target": "nsis",
+            "icon": "build/icon.ico"
+        },
+        "nsis": {
+            "installerIcon": "build/installerIcon.ico",
+            "uninstallerIcon": "build/uninstallerIcon.ico",
+            "allowToChangeInstallationDirectory": true,
+            "oneClick": false
+        },
+        "publish": {
+            "provider": "github",
+            "owner": "intern-cubit",
+            "repo": "key-gen-app",
+            "releaseType": "release",
+            "publishAutoUpdate": true
+        }
+    }
+}
