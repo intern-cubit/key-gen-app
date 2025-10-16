@@ -3,6 +3,7 @@ import main as fastapi_app # Import your FastAPI app from main.py
 import os
 import sys
 import logging
+import logging.config
 
 # Configure logging for uvicorn, ensuring it respects the main app's logging settings
 log_config = uvicorn.config.LOGGING_CONFIG
@@ -27,7 +28,9 @@ if not server_logger.handlers:
 # This ensures uvicorn's internal messages also use the desired format.
 logging.config.dictConfig(log_config)
 
-server_logger.info(f"Starting FastAPI server on http://{HOST}:{PORT}")
+server_logger.info("=" * 80)
+server_logger.info(f"🚀 Starting FastAPI server on http://{HOST}:{PORT}")
+server_logger.info("=" * 80)
 
 try:
     # Create a Uvicorn server configuration

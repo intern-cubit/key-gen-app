@@ -198,66 +198,7 @@ function getBackendExecutablePath() {
     }
 }
 
-function startBackendDev() {
-    console.log(`[BACKEND] Starting backend in development mode...`);
-    
-    // In development, run the Python script directly
-    const pythonScript = path.join(__dirname, "backend", "run_server.py");
-    
-    if (!fs.existsSync(pythonScript)) {
-        dialog.showErrorBox(
-            "Backend Error",
-            `Backend script not found at: ${pythonScript}`
-        );
-        app.quit();
-        return;
-    }
-
-    console.log(`[BACKEND] Attempting to spawn backend from: ${pythonScript}`);
-    backendProcess = spawn("python", [pythonScript], {
-        cwd: path.join(__dirname, "backend")
-    });
-
-    backendProcess.stdout.on("data", (data) => {
-        console.log(`[BACKEND] stdout: ${data.toString().trim()}`);
-    });
-
-    backendProcess.stderr.on("data", (data) => {
-        console.error(`[BACKEND] stderr: ${data.toString().trim()}`);
-    });
-
-    backendProcess.on("close", (code) => {
-        console.log(`[BACKEND] process exited with code ${code}`);
-        if (code !== 0 && code !== null) {
-            dialog.showErrorBox(
-                "Backend Crashed",
-                `The backend application exited unexpectedly with code ${code}. Please check console for errors.`
-            );
-        }
-    });
-
-    backendProcess.on("error", (err) => {
-        console.error(
-            `[BACKEND] Failed to start backend process: ${err.message}`
-        );
-        dialog.showErrorBox(
-            "Backend Launch Error",
-            `Could not start the backend application. Error: ${err.message}`
-        );
-        app.quit();
-    });
-    console.log("[BACKEND] Backend process spawned in development mode.");
-}
-
 function startBackend() {
-    const isDev = !app.isPackaged;
-    
-    if (isDev) {
-        startBackendDev();
-        return;
-    }
-    
-    // Production mode
     const backendExePath = getBackendExecutablePath();
 
     console.log(`[BACKEND] Backend executable path: ${backendExePath}`);
@@ -370,27 +311,17 @@ function createWindow() {
         icon: path.join(__dirname, "build", "icon.ico"), 
     });
 
-    // Check if we're in development mode
-    const isDev = !app.isPackaged;
-    
-    if (isDev) {
-        // In development, load from the dev server
-        console.log(`[FRONTEND] Loading frontend from dev server: http://localhost:5174`);
-        mainWindow.loadURL('http://localhost:5174');
-    } else {
-        // In production, load from built files
-        const frontendPath = path.join(__dirname, "frontend", "dist", "index.html");
-        console.log(`[FRONTEND] Loading frontend from: ${frontendPath}`);
+    const frontendPath = path.join(__dirname, "frontend", "dist", "index.html");
+    console.log(`[FRONTEND] Loading frontend from: ${frontendPath}`);
 
-        if (fs.existsSync(frontendPath)) {
-            mainWindow.loadFile(frontendPath);
-        } else {
-            dialog.showErrorBox(
-                "Frontend Build Missing",
-                `Frontend build not found at ${frontendPath}. Please run 'npm run build' in your 'frontend/' directory.`
-            );
-            app.quit();
-        }
+    if (fs.existsSync(frontendPath)) {
+        mainWindow.loadFile(frontendPath);
+    } else {
+        dialog.showErrorBox(
+            "Frontend Build Missing",
+            `Frontend build not found at ${frontendPath}. Please run 'npm run build' in your 'frontend/' directory.`
+        );
+        app.quit();
     }
 
     mainWindow.on("closed", () => {

@@ -35,6 +35,8 @@ Thumbs.db
 
 # Environment variables (if you have one)
 .env
+/build/
+/dist/
 
 # ==========================================================
 # IMPORTANT: DO NOT IGNORE THESE IF THEY ARE NEEDED BY electron-builder

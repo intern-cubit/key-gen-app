@@ -1,16 +1,10 @@
 {
     "name": "key-gen",
-    "version": "0.1.1",
+    "version": "0.0.1",
     "main": "main.js",
     "scripts": {
         "start": "electron .",
-        "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\" \"npm run dev:electron\"",
-        "dev:frontend": "cd frontend && npm run dev",
-        "dev:backend": "cd backend && python run_server.py",
-        "dev:electron": "wait-on http://localhost:5174 http://localhost:8001/health && electron .",
-        "build": "npm run build:frontend && npm run build:backend && electron-builder",
-        "build:frontend": "cd frontend && npm run build",
-        "build:backend": "cd backend && python -m PyInstaller fastapibackend.spec",
+        "build": "electron-builder",
         "dist": "electron-builder --dir",
         "test": "echo \"Error: no test specified\" && exit 1",
         "build:publish": "electron-builder --publish always"
