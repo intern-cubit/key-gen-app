@@ -227,11 +227,14 @@ function startBackend() {
 
     backendProcess.on("close", (code) => {
         console.log(`[BACKEND] process exited with code ${code}`);
-        if (code !== 0 && code !== null) {
+        // Exit code 0, null, or 15 (SIGTERM) are considered normal shutdowns
+        if (code !== 0 && code !== null && code !== 15) {
             dialog.showErrorBox(
                 "Backend Crashed",
                 `The backend application exited unexpectedly with code ${code}. Please check console for errors.`
             );
+        } else if (code === 15) {
+            console.log("[BACKEND] Backend shutdown gracefully (SIGTERM).");
         }
     });
 
@@ -418,26 +421,27 @@ app.on("will-quit", async (event) => {
         console.log("Terminating backend process...");
 
         let killTimeout;
+        let isShuttingDown = false;
 
         const cleanupAndExit = () => {
-            clearTimeout(killTimeout);
+            if (killTimeout) clearTimeout(killTimeout);
             backendProcess = null;
             console.log(
                 "[APP LIFECYCLE] Backend process reference cleared. Allowing Electron to exit."
             );
-            app.exit();
+            app.exit(0);
         };
 
         const checkAndKill = () => {
             try {
                 process.kill(backendProcess.pid, 0);
                 console.log(
-                    "Backend process still running, sending SIGKILL..."
+                    "Backend process still running after timeout, sending SIGKILL..."
                 );
                 backendProcess.kill("SIGKILL");
             } catch (e) {
                 console.log(
-                    "Backend process already terminated or does not exist (during force kill check)."
+                    "Backend process already terminated (during force kill check)."
                 );
             } finally {
                 cleanupAndExit();
@@ -445,20 +449,26 @@ app.on("will-quit", async (event) => {
         };
 
         backendProcess.once("close", (code) => {
-            console.log(`Backend process closed with code ${code}`);
-            cleanupAndExit();
+            if (!isShuttingDown) {
+                isShuttingDown = true;
+                console.log(`Backend process closed with code ${code}`);
+                cleanupAndExit();
+            }
         });
 
         backendProcess.once("error", (err) => {
-            console.error(
-                `Error with backend process during termination: ${err.message}`
-            );
-            cleanupAndExit();
+            if (!isShuttingDown) {
+                isShuttingDown = true;
+                console.error(
+                    `Error with backend process during termination: ${err.message}`
+                );
+                cleanupAndExit();
+            }
         });
 
         try {
             console.log("Sending shutdown request to backend API endpoint...");
-            const { default: fetch } = await import("node-fetch"); // Ensure node-fetch is available if you don't have it globally
+            const { default: fetch } = await import("node-fetch");
 
             const response = await fetch(BACKEND_SHUTDOWN_URL, {
                 method: "POST",
@@ -469,24 +479,30 @@ app.on("will-quit", async (event) => {
                 console.log(
                     "Backend shutdown endpoint called successfully. Waiting for process to exit..."
                 );
+                // Set a timeout to force kill if graceful shutdown takes too long
+                killTimeout = setTimeout(checkAndKill, 5000);
             } else {
                 console.error(
                     `Backend shutdown endpoint returned error: ${response.status} ${response.statusText}. Proceeding with signal termination.`
                 );
                 backendProcess.kill("SIGTERM");
                 console.log("Sent SIGTERM to backend process (as fallback).");
+                killTimeout = setTimeout(checkAndKill, 5000);
             }
         } catch (error) {
             console.error(
                 `Error calling backend shutdown endpoint: ${error.message}. Proceeding with signal termination.`
             );
-            backendProcess.kill("SIGTERM");
-            console.log("Sent SIGTERM to backend process (as fallback).");
+            try {
+                backendProcess.kill("SIGTERM");
+                console.log("Sent SIGTERM to backend process (as fallback).");
+            } catch (killError) {
+                console.error(`Error sending SIGTERM: ${killError.message}`);
+            }
+            killTimeout = setTimeout(checkAndKill, 5000);
         }
-
-        killTimeout = setTimeout(checkAndKill, 5000);
     } else {
         console.log("No backend process to terminate.");
-        app.exit();
+        app.exit(0);
     }
 });

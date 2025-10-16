@@ -317,15 +317,22 @@ async def test_firebase_connection():
 @app.post("/shutdown")
 async def shutdown():
     """Shutdown endpoint for graceful termination"""
-    import os
-    import signal
-    def shutdown_handler():
+    logger.info("Shutdown endpoint called. Initiating graceful shutdown...")
+    
+    # Send response before shutting down
+    import asyncio
+    
+    async def shutdown_server():
+        await asyncio.sleep(0.5)  # Give time for response to be sent
+        logger.info("Shutting down server now...")
+        import os
+        import signal
         os.kill(os.getpid(), signal.SIGTERM)
     
-    # Schedule the shutdown to happen after the response is sent
-    import asyncio
-    asyncio.get_event_loop().call_later(0.5, shutdown_handler)
-    return {"message": "Server shutting down..."}
+    # Schedule the shutdown
+    asyncio.create_task(shutdown_server())
+    
+    return {"message": "Server shutting down gracefully...", "status": "ok"}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8001)

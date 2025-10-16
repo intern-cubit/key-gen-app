@@ -4,6 +4,8 @@ import os
 import sys
 import logging
 import logging.config
+import signal
+import asyncio
 
 # Configure logging for uvicorn, ensuring it respects the main app's logging settings
 log_config = uvicorn.config.LOGGING_CONFIG
@@ -32,6 +34,20 @@ server_logger.info("=" * 80)
 server_logger.info(f"🚀 Starting FastAPI server on http://{HOST}:{PORT}")
 server_logger.info("=" * 80)
 
+# Global server instance for signal handling
+server = None
+
+def handle_shutdown(signum, frame):
+    """Handle shutdown signals gracefully"""
+    server_logger.info(f"Received signal {signum}. Initiating graceful shutdown...")
+    if server:
+        server.should_exit = True
+    sys.exit(0)
+
+# Register signal handlers
+signal.signal(signal.SIGTERM, handle_shutdown)
+signal.signal(signal.SIGINT, handle_shutdown)
+
 try:
     # Create a Uvicorn server configuration
     config = uvicorn.Config(
@@ -52,6 +68,7 @@ try:
     server.run()
 
     server_logger.info("Uvicorn server has gracefully stopped.")
+    sys.exit(0)
 
 except Exception as e:
     server_logger.critical(f"CRITICAL ERROR: Failed to start or run FastAPI server: {e}", exc_info=True)
